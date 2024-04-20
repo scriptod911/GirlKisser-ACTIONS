@@ -1,0 +1,40 @@
+name: Build with VS and vcpkg
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install vcpkg
+      uses: vcpkg/actions::v1
+      with:
+        vcpkg_root: $(build.working_directory)/vcpkg
+
+    - name: Fetch vcpkg dependencies
+      run: |
+        $(build.working_directory)/vcpkg/vcpkg.exe install minhook:x64-windows imgui:x64-windows imgui[dx11-binding]:x64-windows imgui[win32-binding]:x64-windows
+
+    - name: Add MSBuild to PATH (v143)
+      uses: microsoft/setup-msbuild@v1
+      with:
+        msbuild-version: v143
+
+    - name: Set environment variables
+      run: |
+        set PATH=$(build.working_directory)/vcpkg/installed/x64-windows/tools/MSVC/14.30.30705/bin;$(PATH)
+        set VCPKG_ROOT=$(build.working_directory)/vcpkg
+
+    - name: Build solution
+      run: |
+        msbuild /m GirlKisser.sln
+      env:
+        Configuration: Release  # You can change this to Debug if needed
+        Platform: x64
+
